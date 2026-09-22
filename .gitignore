@@ -1,0 +1,52 @@
+### Environment / secrets ###
+.env
+.env.local
+.env.*.local
+**/appsettings.Development.json
+**/appsettings.*.local.json
+
+### Node / Next.js (frontend/) ###
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.turbo/
+frontend/.vercel/
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/.pnpm-debug.log*
+frontend/*.tsbuildinfo
+frontend/next-env.d.ts
+
+### .NET (backend/) ###
+backend/**/bin/
+backend/**/obj/
+backend/**/*.user
+backend/**/publish/
+backend/**/*.nupkg
+backend/**/.vs/
+
+# EF Core migrations are committed on purpose — do not ignore backend/**/Migrations/
+
+### Docker ###
+# Local bind-mount data (Postgres data dir, uploaded files, etc.)
+# Update the path once the volume mapping in docker-compose.yml is finalized
+docker/data/
+docker/volumes/
+
+### IDE ###
+.vs/
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.swp
+
+### OS ###
+.DS_Store
+Thumbs.db
+
+### Logs ###
+*.log
+logs/
