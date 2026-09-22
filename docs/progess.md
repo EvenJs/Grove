@@ -9,7 +9,7 @@
 
 ## Current focus
 
-**Milestone**: M1 — Data model + single-user login + backend CRUD + Chinese-search spike
+**Milestone**: M1 — Data model + single-user login + backend CRUD
 **Status**: Not started
 **Notes**: —
 
@@ -21,10 +21,10 @@
 
 | Milestone | Content                                                              | Status      | Notes |
 | --------- | -------------------------------------------------------------------- | ----------- | ----- |
-| M1        | Data model + single-user login + backend CRUD + Chinese-search spike | Not started |       |
+| M1        | Data model + single-user login + backend CRUD                        | Not started |       |
 | M2        | Markdown rendering + editor (frontend)                               | Not started |       |
 | M3        | Frontend list / detail / edit for posts                              | Not started |       |
-| M4        | Tags + search (incl. Chinese) + blog feed + public-view isolation    | Not started |       |
+| M4        | Tags + search (English, Postgres FTS) + blog feed + public-view isolation | Not started |       |
 | M5        | Deploy + backup + basic SEO + RSS (**MVP live**)                     | Not started |       |
 
 ### Phase 2 — Knowledge Base
@@ -49,6 +49,5 @@
 
 Things already decided to revisit at a specific point — not blocking right now, but don't let them slide past their milestone unnoticed:
 
-- [ ] **Note `language` field** (`en` / `zh`) — decide before M4, once English/Chinese posts actually start mixing in the feed
+- [ ] **Note `language` field** (`en` / `zh`) + **Chinese search approach** (zhparser vs. pg_trgm vs. Meilisearch) — decide together, whenever you're about to publish your first Chinese-language note; not tied to a milestone. Until then, M1/M4 build plain English Postgres full-text search.
 - [ ] **Language-switch mechanism** for bilingual UI chrome (toggle vs. Accept-Language detection vs. URL prefix) — decide during M3
-- [ ] **Chinese search approach** (zhparser vs. pg_trgm vs. Meilisearch) — this _is_ part of M1; resolve during the spike, log the choice in decisions.md
