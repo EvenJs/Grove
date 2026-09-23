@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Grove.Api/Grove.Api.csproj" />
+  <Project Path="Grove.Application/Grove.Application.csproj" />
+  <Project Path="Grove.Domain/Grove.Domain.csproj" />
+  <Project Path="Grove.Infrastructure/Grove.Infrastructure.csproj" />
+</Solution>
