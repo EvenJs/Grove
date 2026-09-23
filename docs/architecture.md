@@ -25,7 +25,36 @@
 
 **Runtime environment**: v1 deploys to a single free or low-cost machine (a machine you own, or a cloud provider's free tier). Free-tier terms change, so confirm the specific provider right before deployment (M5).
 
-**Repo structure**: monorepo — `frontend/` (Next.js) + `backend/` (ASP.NET Core), one `docker-compose.yml` at root. Backend is a single project, folder-separated (`Controllers/`, `Models/`, `Data/`, `Services/`), no Clean Architecture layering yet. See decisions.md for the reasoning.
+**Repo structure**: monorepo — `frontend/` (Next.js) + `backend/` (ASP.NET Core), one `docker-compose.yml` at root. Backend follows Clean Architecture, as four separate projects with dependencies pointing inward:
+
+```
+backend/
+├── Grove.Domain/          # Entities, enums — no dependencies on anything else
+├── Grove.Application/     # Interfaces (INoteRepository, etc.), DTOs, use-case logic — depends on Domain only
+├── Grove.Infrastructure/  # EF Core DbContext, repository implementations — depends on Application + Domain
+├── Grove.Api/             # Controllers, Program.cs, DI wiring — depends on Application + Infrastructure
+└── Grove.sln
+```
+
+SOLID is applied within each project (single-responsibility services, dependency inversion via interfaces defined in Application and implemented in Infrastructure). This supersedes the original single-project decision — see decisions.md.
+
+**Application layer pattern**: CQRS via MediatR — Commands and Queries as objects, one handler each, organized by feature:
+
+```
+Grove.Application/
+├── Common/
+│   └── Interfaces/         # IApplicationDbContext, etc. — implemented in Infrastructure
+├── Notes/
+│   ├── Commands/
+│   │   ├── CreateNote/     # CreateNoteCommand + CreateNoteCommandHandler
+│   │   └── UpdateNote/
+│   └── Queries/
+│       ├── GetNoteBySlug/
+│       └── GetNotesList/
+└── DependencyInjection.cs  # AddApplication() extension, called from Grove.Api's Program.cs
+```
+
+Controllers in `Grove.Api` stay thin — they build a Command/Query and send it via `IMediator`, they don't contain logic themselves.
 
 ## Architecture Diagram
 

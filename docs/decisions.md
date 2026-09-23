@@ -1,24 +1,16 @@
 # Grove — Decision Log
 
-Reverse-chronological. One entry per decision: what was decided, why, and what it changed (if anything) in `Grove_prd.md` or `Grove_brand.md`. `Grove_prd.md` and `Grove_brand.md` are the source of truth for current state; this file is the paper trail for how they got there.
+Reverse-chronological. One entry per decision: what was decided, why, and what it changed (if anything) in the other Grove docs (`prd.md`, `brand.md`, `architecture.md`, `data-model.md`, `api-design.md`). Those docs are the source of truth for current state; this file is the paper trail for how they got there.
 
 ---
 
-## 2026-09-22 — Chinese search deferred: build English full-text search now, decide the Chinese approach when Chinese content actually appears
+## 2026-09-22 — Backend restructured to full Clean Architecture (supersedes the structural half of the monorepo decision below)
 
-**Decision**: dropped the "Chinese-search spike" from M1. Content is English-only for now, so M1/M4 build plain PostgreSQL full-text search (`tsvector` + `english` config + `ts_rank`). The Chinese segmentation decision (zhparser vs. pg_trgm vs. Meilisearch) and the `language` column it depends on are deferred together, triggered by "about to publish the first Chinese note," not pinned to a milestone.
+**Decision**: reversed the single-project call from earlier the same day. Backend is now four projects — `Grove.Domain`, `Grove.Application`, `Grove.Infrastructure`, `Grove.Api` — with project references enforcing the dependency rule (Domain depends on nothing; Application depends on Domain; Infrastructure implements Application's interfaces; Api wires it together). SOLID applies within each project.
 
-**Why**: there's no real Chinese content yet to validate a segmentation approach against — spiking now would mean testing against synthetic text, which doesn't tell you anything about actual relevance quality. Building proper English full-text search now (stemming, ranking) beats building for a requirement that isn't live yet; pg_trgm as a language-agnostic stopgap was considered and rejected for now since it gives weaker English relevance than native `tsvector` for no current benefit. S-06 stays a Phase 1 requirement, its priority is unchanged, only the implementation timing moved.
+**Why**: chose full Clean Architecture deliberately, for the practice/rigor of doing it properly — not because Phase 1's scope (Note, Tag, User) demands it. Worth being explicit that this trades away what the single-project decision optimized for: a compiler-enforced boundary matters most for stopping a teammate from cutting corners, and there's no teammate here. Traded that for the discipline of doing the real thing rather than a folder-based approximation. Application layer uses CQRS with MediatR (Commands/Queries + handlers, organized per feature) rather than plain service classes — more ceremony, consistent with doing Clean Architecture for the practice rather than the minimum needed for Phase 1's scope.
 
-**Affects**: prd.md §4.5 (Technical approach rewritten, S-06 acceptance criterion caveated), §8 milestones (M1 drops "Chinese-search spike," M4 reworded to "English, Postgres FTS"); progess.md (same milestone wording, open items merged: language field + Chinese search approach now one combined, event-triggered item).
-
-## 2026-09-22 — User table confirmed: rate-limit state in DB, session lifetime is not
-
-**Decision**: `User` table keeps `failed_attempts` and `locked_until` as real columns (A-05 rate-limiting). Session lifetime (A-06) is not a DB field at all — it's handled entirely by ASP.NET Core's cookie auth config (`ExpireTimeSpan` / `SlidingExpiration`), since the auth cookie already carries expiry and a DB column would just duplicate it. "Configurable" means an appsettings/env value, not a stored or user-editable setting.
-
-**Why**: rate-limiting and session lifetime got bundled into one open question but are different kinds of state. Rate-limit counters benefit from DB durability (a redeploy shouldn't hand a brute-forcer a free reset), and at one account, an account-level counter is also simpler and more correct than IP-based limiting middleware would be. Session expiry is already solved by the framework; storing it too would just be two sources of truth for the same fact.
-
-**Affects**: data-model.md (User table confirmed, session-lifetime note added).
+**Affects**: `architecture.md` (repo-structure section rewritten, Application layer folder shape added), M1 backend scaffold commands revised (see chat).
 
 ## 2026-09-22 — Heading-level links for Phase 2, not full block-level
 
@@ -34,17 +26,17 @@ Reverse-chronological. One entry per decision: what was decided, why, and what i
 
 **Why**: splitting into two entities would reintroduce the exact problem §1.2 of the PRD names as a reason Grove exists ("blog and knowledge base use separate tools, duplicate upkeep") — publishing a note would become a cross-table migration or a reference-based split, and Phase 2's Link table would need a polymorphic target (Note or Post), which relational databases handle badly. A few nullable columns on Note get the same practical benefit (post-specific fields) without any of that. Considered adding an `intent` field (note vs. post) at creation time to record the author's original plan; deferred — it's a non-breaking addition, so it can be added later if filtering by original intent ever actually comes up.
 
-**Affects**: PRD §4.2 (added N-09), `excerpt`, `cover_image_url` added to the Note table (data-model.md).
+**Affects**: PRD §4.2 (added N-09, `excerpt`, `cover_image_url` on the Note table).
 
-## 2026-09-22 — Consolidated Note/Tag/NoteTag schema into data-model.md
+---
 
-**Decision**: moved the field-level table definitions for Note (§4.2) and Tag/NoteTag (§4.4) out of prd.md and into data-model.md, which now holds ER overview + Phase 1 field-level schema in one place. Link/Path/PathItem/Flashcard stay in prd.md §4 until Phase 2/3 starts, then move over the same way.
+## 2026-09-22 — Split technical docs out of the PRD
 
-**Why**: M1 is data-model work; schema split across two docs meant hunting through the PRD mid-implementation.
+**Decision**: pulled §6 (stack, architecture diagram) and §7 (data model ER overview) out of `Grove_prd.md` into three new standalone files: `architecture.md`, `api-design.md`, `data-model.md`. The PRD now just points to each. Field-level table schemas (Note, Link, Tag, etc., with columns and indexes) stay in PRD §4 for now, next to each feature's requirements — not yet consolidated into `data-model.md`.
 
-**Gap found**: no field-level `User` table existed anywhere, despite being listed in the ER overview and having login requirements (§4.11). Added a proposed schema to data-model.md (id, username, password_hash, failed_attempts, locked_until, created_at, updated_at) inferred from A-01/A-02/A-05/A-06 — **not yet confirmed**. Needs a decision on whether rate-limit/session state belongs in this table or in the session store.
+**Why**: schema and API surface change constantly during build (M1 especially); keeping them inside the requirements source-of-truth document made routine implementation churn look like it was touching product scope. Considered also splitting `ui-layout.md` and `deployment.md` now, and switching to one-file-per-decision ADRs instead of this single log — both rejected as premature: no UI decided yet, deployment target not needed until M5, and ~5 log entries don't justify the fragmentation of per-file ADRs yet.
 
-**Affects**: prd.md §4.2, §4.4, §7 (now point to data-model.md); data-model.md (new Phase 1 Tables section).
+**Affects**: PRD §6 and §7 replaced with pointers; `architecture.md`, `api-design.md`, `data-model.md` created.
 
 ## 2026-09-22 — Repo structure: monorepo
 
@@ -69,14 +61,6 @@ Reverse-chronological. One entry per decision: what was decided, why, and what i
 **Why**: a blog needs its own post categorization and lookup, independent of note-linking features.
 
 **Affects**: PRD §4.0 (open question resolved).
-
-## 2026-09-22 — Split PRD §6/§7 into architecture.md, api-design.md, data-model.md
-
-**Decision**: pulled §6 (stack, architecture diagram) and §7 (data model ER overview) out of `Grove_prd.md` into three new standalone files: `architecture.md`, `api-design.md`, `data-model.md`. The PRD now just points to each. Field-level table schemas (Note, Link, Tag, etc., with columns and indexes) stay in PRD §4 for now, next to each feature's requirements — not yet consolidated into `data-model.md` (later done — see the schema-consolidation entry above).
-
-**Why**: schema and API surface change constantly during build (M1 especially); keeping them inside the requirements source-of-truth document made routine implementation churn look like it was touching product scope. Considered also splitting `ui-layout.md` and `deployment.md` now, and switching to one-file-per-decision ADRs instead of this single log — both rejected as premature: no UI decided yet, deployment target not needed until M5, and ~5 log entries don't justify the fragmentation of per-file ADRs yet.
-
-**Affects**: PRD §6 and §7 replaced with pointers; `architecture.md`, `api-design.md`, `data-model.md` created.
 
 ---
 
