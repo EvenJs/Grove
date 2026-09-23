@@ -10,7 +10,7 @@ Reverse-chronological. One entry per decision: what was decided, why, and what i
 
 **Why**: chose full Clean Architecture deliberately, for the practice/rigor of doing it properly — not because Phase 1's scope (Note, Tag, User) demands it. Worth being explicit that this trades away what the single-project decision optimized for: a compiler-enforced boundary matters most for stopping a teammate from cutting corners, and there's no teammate here. Traded that for the discipline of doing the real thing rather than a folder-based approximation. Application layer uses CQRS with MediatR (Commands/Queries + handlers, organized per feature) rather than plain service classes — more ceremony, consistent with doing Clean Architecture for the practice rather than the minimum needed for Phase 1's scope.
 
-**Affects**: `architecture.md` (repo-structure section rewritten, Application layer folder shape added), M1 backend scaffold commands revised (see chat).
+**Affects**: `architecture.md` (repo-structure section rewritten, Application layer folder shape added), progess.md (M1 Step 0 scaffolding checklist and Tasks rewritten for the four-project structure and MediatR).
 
 ## 2026-09-22 — Heading-level links for Phase 2, not full block-level
 

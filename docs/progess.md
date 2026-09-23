@@ -10,23 +10,26 @@
 ## Current focus
 
 **Milestone**: M1 — Data model + single-user login + backend CRUD
-**Status**: Not started
-**Notes**: —
+**Status**: In progress
+**Notes**: Solution scaffolded (2026-09-23): four backend projects with correct project references, MediatR added, Next.js frontend created, docker-compose.yml with the `db` service. Still bare — Class1.cs placeholders, no entities, no DbContext, default Program.cs.
 
-### M1 — Step 0: project scaffolding (not started yet)
+### M1 — Step 0: project scaffolding
 
-Nothing's been created on disk beyond docs/ and README.md — no frontend/, no backend/. This has to happen before any of the tasks below. Per architecture.md's already-decided stack:
-
-- [ ] Monorepo layout: `frontend/` (Next.js) + `backend/` (ASP.NET Core) folders, `docker-compose.yml` at root
-- [ ] `backend/`: new ASP.NET Core Web API project (current LTS), single project, folder-separated (`Controllers/`, `Models/`, `Data/`, `Services/`) — no Clean Architecture layers (per decisions.md)
-- [ ] Add EF Core + Npgsql packages; wire up a PostgreSQL connection string
-- [ ] Docker Compose services: `backend` + `postgres` (frontend service can wait until M2, when there's a frontend to run)
-- [ ] A trivial health-check endpoint (e.g. `GET /api/health`) to confirm the API boots and reaches Postgres, before writing anything real
+- [x] Monorepo layout: `frontend/` (Next.js) + `backend/` (ASP.NET Core) folders, `docker-compose.yml` at root
+- [x] `backend/` solution (`Grove.slnx`), four projects with references verified pointing inward: `Grove.Domain` (none) ← `Grove.Application` (→ Domain) ← `Grove.Infrastructure` (→ Application, Domain) ← `Grove.Api` (→ Application, Infrastructure). Target framework `net10.0` throughout.
+- [ ] `Grove.Domain`: Note, Tag, NoteTag, User entities/enums — still just the template's `Class1.cs`
+- [x] MediatR package added to `Grove.Application` (v14.2.0)
+- [ ] `Grove.Application`: actual Commands/Queries per feature (`Notes/Commands/CreateNote`, `Notes/Queries/GetNoteBySlug`, etc.), plus interfaces like `IApplicationDbContext`
+- [ ] `Grove.Infrastructure`: EF Core + Npgsql packages, `DbContext` implementing Application's interfaces — not added yet
+- [ ] `Grove.Api`: DI wiring (`AddApplication()`, `AddInfrastructure()`), thin controllers sending via `IMediator` — currently just the default `dotnet new webapi` template (`AddControllers()`, `AddOpenApi()`, no MediatR/Infrastructure wiring)
+- [x] Docker Compose: `db` service (Postgres 17)
+- [ ] Docker Compose: `backend` service — not added yet
+- [ ] A trivial health-check endpoint (`GET /api/health`) to confirm the API boots, DI resolves across all four projects, and it reaches Postgres, before writing anything real
 
 ### M1 — Tasks
 
-- [ ] EF Core migrations: Note, Tag, NoteTag, User (schema in data-model.md)
-- [ ] Note CRUD endpoints: create, list, detail, update, delete (per api-design.md)
+- [ ] EF Core migrations: Note, Tag, NoteTag, User (schema in data-model.md). Migrations live in `Grove.Infrastructure`, run with `Grove.Api` as the startup project (`dotnet ef migrations add ... --project Grove.Infrastructure --startup-project Grove.Api`)
+- [ ] Note CRUD via MediatR: `CreateNoteCommand`, `UpdateNoteCommand`, `DeleteNoteCommand`, `GetNoteBySlugQuery`, `GetNotesListQuery` (per api-design.md endpoints, `Grove.Application/Notes/`)
 - [ ] Title uniqueness check, case-insensitive, on create/update (N-07)
 - [ ] Status/visibility fields enforced server-side: a note is only public when `status=published` AND `visibility=public` (§4.2 rule)
 - [ ] Deletion impact-scope check (N-08) — for M1 this just reports 0 links / 0 paths, since Link/Path tables don't exist yet; revisit once Phase 2 ships
@@ -59,13 +62,13 @@ Pulled from prd.md's acceptance criteria (§4.2, §4.11), filtered to what's bac
 
 ### Phase 1 — Blog
 
-| Milestone | Content                                                              | Status      | Notes |
-| --------- | -------------------------------------------------------------------- | ----------- | ----- |
-| M1        | Data model + single-user login + backend CRUD                        | Not started |       |
-| M2        | Markdown rendering + editor (frontend)                               | Not started |       |
-| M3        | Frontend list / detail / edit for posts                              | Not started |       |
+| Milestone | Content                                                                   | Status      | Notes |
+| --------- | ------------------------------------------------------------------------- | ----------- | ----- |
+| M1        | Data model + single-user login + backend CRUD                             | Not started |       |
+| M2        | Markdown rendering + editor (frontend)                                    | Not started |       |
+| M3        | Frontend list / detail / edit for posts                                   | Not started |       |
 | M4        | Tags + search (English, Postgres FTS) + blog feed + public-view isolation | Not started |       |
-| M5        | Deploy + backup + basic SEO + RSS (**MVP live**)                     | Not started |       |
+| M5        | Deploy + backup + basic SEO + RSS (**MVP live**)                          | Not started |       |
 
 ### Phase 2 — Knowledge Base
 
