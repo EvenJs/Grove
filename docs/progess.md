@@ -5,6 +5,8 @@
 
 **How to use this file**: update the status and notes as you go — no fixed format required, just enough that a fresh chat can tell where things stand without you re-explaining. When you re-upload it, I'll read it at the start of a session instead of asking.
 
+**Working convention — branches & commits**: one short-lived feature branch per checklist item below (e.g. `feat/domain-entities`, `feat/ef-core-dbcontext`, `feat/note-crud-commands`), not one per whole milestone or whole layer — keeps a branch mapped to a checked box. Within a branch, one commit per logical change (e.g. for domain-entities: `BaseEntity`, then the enums, then `Note`, then `Tag`, then `User` as separate commits), not one commit dumping the whole branch. Merge to `main` and delete the branch once a checklist item is done.
+
 ---
 
 ## Current focus
@@ -28,11 +30,21 @@
 
 ### M1 — Tasks
 
+Grouped into three branches — each bullet below is a commit within its branch, not a branch of its own (they're too small/coupled to stand alone; see chat, 2026-09-23).
+
+**`feat/ef-core-migrations`**
+
 - [ ] EF Core migrations: Note, Tag, NoteTag, User (schema in data-model.md). Migrations live in `Grove.Infrastructure`, run with `Grove.Api` as the startup project (`dotnet ef migrations add ... --project Grove.Infrastructure --startup-project Grove.Api`)
+
+**`feat/note-crud`**
+
 - [ ] Note CRUD via MediatR: `CreateNoteCommand`, `UpdateNoteCommand`, `DeleteNoteCommand`, `GetNoteBySlugQuery`, `GetNotesListQuery` (per api-design.md endpoints, `Grove.Application/Notes/`)
 - [ ] Title uniqueness check, case-insensitive, on create/update (N-07)
 - [ ] Status/visibility fields enforced server-side: a note is only public when `status=published` AND `visibility=public` (§4.2 rule)
 - [ ] Deletion impact-scope check (N-08) — for M1 this just reports 0 links / 0 paths, since Link/Path tables don't exist yet; revisit once Phase 2 ships
+
+**`feat/auth`**
+
 - [ ] Single-user login endpoint, cookie session (A-01)
 - [ ] Credentials via env var or first-run setup; no signup endpoint exists (A-02, A-04)
 - [ ] Auth guard: write endpoints return 401 when unauthenticated (A-03)

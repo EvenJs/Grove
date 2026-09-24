@@ -109,14 +109,16 @@ PRD §4.11 (Access Control) had requirements (A-01 single-user login, A-02 crede
 | Field           | Type      | Description                                                          |
 | --------------- | --------- | -------------------------------------------------------------------- |
 | id              | bigint    | Primary key                                                          |
-| username        | varchar   | Login username; unique                                               |
+| email           | varchar   | Login identifier; unique                                             |
 | password_hash   | varchar   | Hashed password (e.g. bcrypt/argon2) — never store plaintext         |
+| first_name      | varchar   | Display name (author byline on posts)                                |
+| last_name       | varchar   | Display name (author byline on posts)                                |
 | failed_attempts | int       | Consecutive failed logins, for A-05 rate-limiting; resets on success |
 | locked_until    | timestamp | Set when rate-limit threshold is hit; nullable                       |
 | created_at      | timestamp | Created time                                                         |
 | updated_at      | timestamp | Updated time (e.g. on password change)                               |
 
-**Suggested index**: unique index on `username`.
+**Suggested index**: unique index on `email`.
 
 **Session lifetime (A-06) is deliberately not a column here.** It's handled by ASP.NET Core's cookie auth config (`ExpireTimeSpan` / `SlidingExpiration` in `Program.cs`), not stored in the DB — it's already tracked in the encrypted auth cookie itself, so a DB column would just be a second copy of the same fact. "Configurable" means an appsettings/env value, not a per-request DB read.
 

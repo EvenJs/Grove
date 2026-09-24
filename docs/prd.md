@@ -440,8 +440,8 @@ In the public view, backlinks only show links coming from public notes — see t
 
 | ID   | Requirement                                                                                                             | Priority |
 | ---- | ----------------------------------------------------------------------------------------------------------------------- | -------- |
-| A-01 | Single-user login (username + password)                                                                                 | P0       |
-| A-02 | Account credentials are set via environment variables or a first-run setup page at initial deployment; no public signup | P0       |
+| A-01 | Single-user login (email + password)                                                                                    | P0       |
+| A-02 | Account credentials (email + password) and display name (first/last, shown as the author on posts) are set via environment variables or a first-run setup page at initial deployment; no public signup | P0       |
 | A-03 | All write operations (create/edit/delete, uploads, public/private toggling) require login                               | P0       |
 | A-04 | Unauthenticated visitors are read-only, limited to public content (rules in §4.6, B-07)                                 | P0       |
 | A-05 | Rate-limit failed logins, to resist brute-forcing                                                                       | P1       |

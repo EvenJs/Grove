@@ -4,6 +4,14 @@ Reverse-chronological. One entry per decision: what was decided, why, and what i
 
 ---
 
+## 2026-09-23 — User logs in with email, not username; added first/last name for display
+
+**Decision**: `User`'s login identifier is `email` (unique), replacing the earlier `username` field. Added `first_name` / `last_name`, used to show an author byline on posts, unrelated to login.
+
+**Why**: single-user system, email is what you'd actually type day to day, no real need for a separate username. Author display name wasn't specified anywhere before now; needed once posts show who wrote them.
+
+**Affects**: prd.md §4.11 (A-01 now "email + password", A-02 mentions display name at setup); data-model.md (User table: `username` → `email`, added `first_name`/`last_name`, unique index moves to `email`).
+
 ## 2026-09-22 — Backend restructured to full Clean Architecture (supersedes the structural half of the monorepo decision below)
 
 **Decision**: reversed the single-project call from earlier the same day. Backend is now four projects — `Grove.Domain`, `Grove.Application`, `Grove.Infrastructure`, `Grove.Api` — with project references enforcing the dependency rule (Domain depends on nothing; Application depends on Domain; Infrastructure implements Application's interfaces; Api wires it together). SOLID applies within each project.
