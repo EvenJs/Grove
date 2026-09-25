@@ -1,0 +1,6 @@
+@Grove.Api_HostAddress = http://localhost:5124
+
+GET {{Grove.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

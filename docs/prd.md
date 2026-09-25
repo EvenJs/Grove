@@ -4,7 +4,7 @@
 **Version**: v1.3 (English; re-scoped into phased delivery)
 **Status**: Draft
 **Author**: —
-**Last updated**: 2026-09-22
+**Last updated**: 2026-09-22 (schema consolidation)
 
 **Changelog (v1.2 → v1.3)**:
 
@@ -153,6 +153,7 @@ Assumptions the design is based on. If actual usage doesn't match, the search an
 | N-06 | Note archiving                                                                                                                           | P2       |
 | N-07 | Note titles are unique (case-insensitive); saving fails with a message on collision                                                      | P0       |
 | N-08 | Deleting a note warns about impact scope (how many notes link to it, how many paths it belongs to); deletion is permanent once confirmed | P0       |
+| N-09 | A note can be created via two entry points ("New Note" / "New Blog Post") that only change which fields the form shows by default (blog fields: `excerpt`, `cover_image_url`); same underlying Note record either way | P0       |
 
 **Status and visibility**: two fields, each governing one thing, with no overlap.
 
@@ -170,32 +171,7 @@ Rule: a note is a Clearing (i.e., appears on the blog) only when `status = publi
 - Tag associations and path items: deleted along with it (tags and paths themselves are kept).
 - Flashcards: deleted along with the note (to be confirmed once the review system ships in Phase 3).
 
-**Note table (primary notes table)**
-
-| Field        | Type      | Description                                                                      |
-| ------------ | --------- | -------------------------------------------------------------------------------- |
-| id           | bigint    | Primary key                                                                      |
-| uuid         | uuid      | Unique identifier                                                                |
-| slug         | varchar   | URL-friendly identifier                                                          |
-| title        | varchar   | Title, unique (case-insensitive)                                                 |
-| content_md   | text      | Markdown source; the source of truth for link relationships                      |
-| content_html | text      | Rendered cache; regenerated when the body or a link target (title, slug) changes |
-| status       | enum      | draft / published / archived                                                     |
-| visibility   | enum      | private / public                                                                 |
-| published_at | timestamp | First public-publish time; the blog feed sorts by this; nullable                 |
-| created_at   | timestamp | Created time                                                                     |
-| updated_at   | timestamp | Updated time                                                                     |
-
-**To decide before M4**: the table above has no explicit language field. Once English and Chinese posts genuinely mix in the blog feed, a reader who only reads one of the two languages could land on a post in the other with no warning. Consider adding a `language` column (`en` / `zh`) to Note, with an optional per-language filter on the blog feed and RSS (§4.6). Not urgent for the first few posts — revisit once this actually comes up.
-
-**Suggested indexes**:
-
-- Unique index on `uuid`
-- Unique index on `slug`
-- Unique index on `lower(title)` (for N-07, and the basis for `[[Title]]` resolution)
-- Composite index on `(visibility, status, published_at)` (blog feed queries)
-- Index on `created_at` (sorting by time)
-- Full-text search index: see §4.5
+**Note table**: field-level schema (columns, indexes) in [data-model.md](data-model.md), including blog-specific `excerpt` / `cover_image_url` columns (nullable, added for N-09). Open item: no `language` field yet — see data-model.md, decide before M4.
 
 **Acceptance criteria**:
 
@@ -223,6 +199,7 @@ Rule: a note is a Clearing (i.e., appears on the blog) only when `status = publi
 | L-06 | Show a context snippet on each backlink                                                                                         | P1       |
 | L-07 | Renaming a note automatically rewrites `[[Old Title]]` to the new title in every other note's body, without breaking the link   | P0       |
 | L-08 | Clicking an unresolved link offers to create a matching note; once created, related links are auto-completed                    | P1       |
+| L-09 | Support `[[Title#Heading]]` to jump to a specific heading inside a note (not block-level embedding/transclusion)                  | P1       |
 
 In the public view, backlinks only show links coming from public notes — see the rule in §4.6, B-07.
 
@@ -235,6 +212,7 @@ In the public view, backlinks only show links coming from public notes — see t
 | target_note_id | bigint    | Target note ID; null for an unresolved link                                                                                                          |
 | target_title   | varchar   | The title as written in the link; used for matching, auto-completion, and the "create note" prompt                                                   |
 | context        | text      | The paragraph containing the link (for backlink summaries); for repeated links to the same target from the same source, the first occurrence is kept |
+| target_heading_slug | varchar | Optional; set when the link is `[[Title#Heading]]` — slug of the target heading within the target note. Null for a whole-note link.            |
 | created_at     | timestamp | Created time                                                                                                                                         |
 
 **Suggested indexes**:
@@ -266,27 +244,7 @@ In the public view, backlinks only show links coming from public notes — see t
 | T-03 | Filter the note list by tag   | P0       |
 | T-04 | Tag cloud / tag listing page  | P1       |
 
-**Tag table**
-
-| Field      | Type      | Description             |
-| ---------- | --------- | ----------------------- |
-| id         | bigint    | Primary key             |
-| name       | varchar   | Tag name                |
-| slug       | varchar   | URL-friendly identifier |
-| created_at | timestamp | Created time            |
-
-**NoteTag table (note–tag association)**
-
-| Field   | Type   | Description |
-| ------- | ------ | ----------- |
-| note_id | bigint | Note ID     |
-| tag_id  | bigint | Tag ID      |
-
-**Suggested indexes**:
-
-- Unique index on `Tag.slug`
-- Composite primary key on `NoteTag(note_id, tag_id)`
-- Index on `NoteTag.tag_id` (query notes by tag)
+**Tag / NoteTag tables**: field-level schema (columns, indexes) moved to [data-model.md](data-model.md).
 
 ---
 
@@ -305,14 +263,14 @@ In the public view, backlinks only show links coming from public notes — see t
 | S-05 | Search suggestions / autocomplete                                                                                                                                                              | P2       |
 | S-06 | Chinese and mixed Chinese/English content is searchable (e.g., searching "依赖注入" matches notes containing that phrase; searching "EF Core 迁移" matches both the English and Chinese parts) | P0       |
 
-**Technical approach**: PostgreSQL's native full-text search (`tsvector`) can't segment Chinese by word with the default configuration, so it alone won't satisfy S-06. Validate with real Chinese notes in M1, then choose one of: (a) PostgreSQL + a Chinese segmentation extension (e.g. zhparser); (b) PostgreSQL + `pg_trgm` substring matching; (c) Meilisearch (built-in Chinese segmentation, but adds another service and memory footprint — lowest priority under the free-first constraint). Prefer (a) or (b) to keep search inside PostgreSQL. Evaluate against the §1.5 scale assumption (≤ 5,000 notes).
+**Technical approach**: content is English-only for now, so M1/M4 build plain PostgreSQL full-text search (`tsvector` + `english` config + `ts_rank`) — proper stemming and relevance ranking for what's actually being written today. PostgreSQL's native full-text search can't segment Chinese by word with the default configuration, so it alone won't satisfy S-06 once Chinese notes appear. That decision (and the `language` column it depends on) is deferred until then, not tied to a milestone — see decisions.md. Options at that point: (a) PostgreSQL + a Chinese segmentation extension (e.g. zhparser); (b) PostgreSQL + `pg_trgm` substring matching; (c) Meilisearch (built-in Chinese segmentation, but adds another service and memory footprint — lowest priority under the free-first constraint). Prefer (a) or (b) to keep search inside PostgreSQL. Evaluate against the §1.5 scale assumption (≤ 5,000 notes).
 
 **Acceptance criteria**:
 
 - Results return within 1 second of a query.
 - Results are sorted by relevance.
 - Keywords are highlighted in the excerpt.
-- Searching "依赖注入" matches Chinese notes containing that term.
+- Searching "依赖注入" matches Chinese notes containing that term (once Chinese search is implemented — see Technical approach above; not required before then).
 - Anonymous searches only return public notes.
 
 ---
@@ -482,8 +440,8 @@ In the public view, backlinks only show links coming from public notes — see t
 
 | ID   | Requirement                                                                                                             | Priority |
 | ---- | ----------------------------------------------------------------------------------------------------------------------- | -------- |
-| A-01 | Single-user login (username + password)                                                                                 | P0       |
-| A-02 | Account credentials are set via environment variables or a first-run setup page at initial deployment; no public signup | P0       |
+| A-01 | Single-user login (email + password)                                                                                    | P0       |
+| A-02 | Account credentials (email + password) and display name (first/last, shown as the author on posts) are set via environment variables or a first-run setup page at initial deployment; no public signup | P0       |
 | A-03 | All write operations (create/edit/delete, uploads, public/private toggling) require login                               | P0       |
 | A-04 | Unauthenticated visitors are read-only, limited to public content (rules in §4.6, B-07)                                 | P0       |
 | A-05 | Rate-limit failed logins, to resist brute-forcing                                                                       | P1       |
@@ -521,7 +479,7 @@ See [architecture.md](architecture.md) for the stack, repo structure, and archit
 
 ## 7. Data Model
 
-See [data-model.md](data-model.md) for the ER overview. Field-level table schemas (columns, indexes) stay in §4, next to each feature's requirements.
+See [data-model.md](data-model.md) for the full schema: ER overview plus field-level tables for Note, Tag, NoteTag, and User. Link, Path, PathItem, and Flashcard table definitions remain in §4 next to their Phase 2/3 requirements, to be moved over when those phases start.
 
 ---
 
@@ -531,10 +489,10 @@ See [data-model.md](data-model.md) for the ER overview. Field-level table schema
 
 | Milestone | Content                                                              | Duration | Output                         |
 | --------- | -------------------------------------------------------------------- | -------- | ------------------------------ |
-| M1        | Data model + single-user login + backend CRUD + Chinese-search spike | 1 week   | Working API                    |
+| M1        | Data model + single-user login + backend CRUD                        | 1 week   | Working API                    |
 | M2        | Markdown rendering + editor (frontend)                               | 1 week   | Can write & preview            |
 | M3        | Frontend list / detail / edit for posts                              | 2 weeks  | Read & write                   |
-| M4        | Tags + search (incl. Chinese) + blog feed + public-view isolation    | 1 week   | Phase 1 (P0) features complete |
+| M4        | Tags + search (English, Postgres FTS) + blog feed + public-view isolation | 1 week   | Phase 1 (P0) features complete |
 | M5        | Deploy + backup + basic SEO + RSS                                    | 1 week   | **MVP live**                   |
 
 **MVP definition**: M1–M5 — "write posts + view posts + tags + search + blog," deployed and usable day to day. Bidirectional links are **not** part of MVP; they ship in Phase 2.
